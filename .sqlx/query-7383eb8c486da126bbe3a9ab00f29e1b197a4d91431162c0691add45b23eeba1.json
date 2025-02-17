@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO bookings (booking_id, title, resource_id, start_time, end_time) VALUES (?, ?, ?, ?, ?);\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "7383eb8c486da126bbe3a9ab00f29e1b197a4d91431162c0691add45b23eeba1"
+}
