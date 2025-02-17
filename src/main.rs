@@ -2,7 +2,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use chrono::Utc;
-use tokio::sync::RwLock;
 
 use tracing::{error, info};
 use tracing_subscriber::{filter, fmt::format::FmtSpan};
@@ -42,7 +41,8 @@ async fn signal_handler(
     mut watcher: tokio::sync::watch::Receiver<InShutdown>,
     shutdown_tx: tokio::sync::watch::Sender<InShutdown>,
 ) -> Result<(), std::io::Error> {
-    let mut sigterm = match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+    let mut sigterm = match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+    {
         Ok(x) => x,
         Err(e) => {
             error!("Failed to install SIGTERM listener: {e} Aborting.");
@@ -58,7 +58,8 @@ async fn signal_handler(
             return Err(e);
         }
     };
-    let mut sigint = match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt()) {
+    let mut sigint = match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
+    {
         Ok(x) => x,
         Err(e) => {
             error!("Failed to install SIGINT listener: {e} Aborting.");
@@ -137,11 +138,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let web_server = web::run_web_server(config.clone(), tx.subscribe());
 
     // Join both tasks
-    let (gather_res, signal_res, web_res) = tokio::join!(
-        gatherer_handle,
-        signal_handle,
-        web_server,
-    );
+    let (gather_res, signal_res, web_res) =
+        tokio::join!(gatherer_handle, signal_handle, web_server,);
     gather_res?;
     signal_res??;
     web_res?;

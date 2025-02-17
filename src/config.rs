@@ -51,9 +51,7 @@ pub(crate) struct WebConfig {
 impl WebConfig {
     async fn try_from_web_config_data(value: WebConfigData) -> Result<Self, ConfigError> {
         let rustls_config =
-            match RustlsConfig::from_pem_file(value.tls_cert_file, value.tls_key_file)
-                .await
-            {
+            match RustlsConfig::from_pem_file(value.tls_cert_file, value.tls_key_file).await {
                 Ok(x) => x,
                 Err(e) => {
                     event!(
@@ -65,7 +63,9 @@ impl WebConfig {
             };
         Ok(Self {
             addr: value.addr,
-            port: value.port, tls_port: value.tls_port, rustls_config,
+            port: value.port,
+            tls_port: value.tls_port,
+            rustls_config,
         })
     }
 }
@@ -90,14 +90,16 @@ impl Config {
         let sqlite_connect_options = sqlx::sqlite::SqliteConnectOptions::new()
             .filename(".bookings.db")
             .create_if_missing(true);
-        let db = SqlitePool::connect_with(sqlite_connect_options).await.map_err(ConfigError::PoolCreate)?;
+        let db = SqlitePool::connect_with(sqlite_connect_options)
+            .await
+            .map_err(ConfigError::PoolCreate)?;
 
         Ok(Self {
             ct: value.ct,
             db,
             log_level: value.log_level,
             rooms: value.rooms,
-            web: WebConfig::try_from_web_config_data(value.web).await?
+            web: WebConfig::try_from_web_config_data(value.web).await?,
         })
     }
 
@@ -131,4 +133,3 @@ impl std::fmt::Debug for ChurchToolsConfig {
             .finish()
     }
 }
-

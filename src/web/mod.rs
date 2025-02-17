@@ -16,7 +16,11 @@ use axum::{
 };
 use tracing::{debug, event, warn, Level};
 
-use crate::{config::{Config, RoomConfig}, db::get_bookings_in_timeframe, Booking, InShutdown};
+use crate::{
+    config::{Config, RoomConfig},
+    db::get_bookings_in_timeframe,
+    Booking, InShutdown,
+};
 
 #[derive(Template)]
 #[template(path = "500.html")]
@@ -24,7 +28,10 @@ struct InternalServerErrorTemplate {
     error_uuid: Uuid,
 }
 
-async fn shutdown_signal(handle: axum_server::Handle, mut watcher: tokio::sync::watch::Receiver<InShutdown>) {
+async fn shutdown_signal(
+    handle: axum_server::Handle,
+    mut watcher: tokio::sync::watch::Receiver<InShutdown>,
+) {
     tokio::select! {
         _ = watcher.changed() => {
             debug!("Shutting down web server now.");
@@ -46,8 +53,9 @@ pub async fn run_web_server(
         .fallback(fallback);
 
     // run it
-    let addr = std::net::SocketAddr::from_str(&format!("{}:{}", &config.web.addr, &config.web.tls_port))
-        .expect("Should be able to parse socket addr");
+    let addr =
+        std::net::SocketAddr::from_str(&format!("{}:{}", &config.web.addr, &config.web.tls_port))
+            .expect("Should be able to parse socket addr");
     event!(Level::INFO, "Webserver (HTTPS) listening on {}", addr);
 
     let shutdown_handle = axum_server::Handle::new();
@@ -89,7 +97,8 @@ fn make_https(
 
 /// Server redirecting every HTTP request to HTTPS
 async fn redirect_http_to_https<F>(config: Arc<Config>, signal: F)
-    where F: Future<Output = ()> + Send + 'static
+where
+    F: Future<Output = ()> + Send + 'static,
 {
     let redir_web_bind_port = config.web.port;
     let redir_web_bind_port_tls = config.web.tls_port;
@@ -103,15 +112,18 @@ async fn redirect_http_to_https<F>(config: Arc<Config>, signal: F)
         }
     };
 
-    let listener = match tokio::net::TcpListener::bind(format!("{}:{}", &config.web.addr, config.web.port)).await {
-        Ok(x) => x,
-        Err(e) => {
-            tracing::error!(
-                "Could not bind a TcP socket for the http -> https redirect service: {e}"
-            );
-            panic!("Unable to start http -> https server. Unrecoverable.");
-        }
-    };
+    let listener =
+        match tokio::net::TcpListener::bind(format!("{}:{}", &config.web.addr, config.web.port))
+            .await
+        {
+            Ok(x) => x,
+            Err(e) => {
+                tracing::error!(
+                    "Could not bind a TcP socket for the http -> https redirect service: {e}"
+                );
+                panic!("Unable to start http -> https server. Unrecoverable.");
+            }
+        };
     tracing::info!(
         "Webserver (HTTP) listening on {}",
         listener
@@ -140,7 +152,7 @@ async fn css_style() -> impl IntoResponse {
 async fn fallback() -> impl IntoResponse {
     (
         StatusCode::NOT_FOUND,
-        Html(include_str!("../../templates/404.html"))
+        Html(include_str!("../../templates/404.html")),
     )
 }
 
@@ -152,7 +164,10 @@ struct Event {
 }
 impl Event {
     fn create_from_booking(value: Booking, config: &Config) -> Option<Self> {
-        let room = config.rooms.iter().find(|r| r.churchtools_id == value.resource_id)?;
+        let room = config
+            .rooms
+            .iter()
+            .find(|r| r.churchtools_id == value.resource_id)?;
         Some(Self {
             name: value.title,
             start_time: value.start_time.into(),
@@ -167,9 +182,7 @@ struct LandingTemplate {
     events: Vec<Event>,
 }
 
-async fn root(
-        Extension(config): Extension<Arc<Config>>,
-    ) -> impl IntoResponse {
+async fn root(Extension(config): Extension<Arc<Config>>) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert(header::SERVER, "axum".parse().expect("static string"));
     // get the current booking states
@@ -181,32 +194,31 @@ async fn root(
             let error_uuid = Uuid::new_v4();
             warn!("Sending internal server error because there was a problem getting bookings.");
             warn!("DBError: {e} Error-UUID: {error_uuid}");
-            return 
-            (
+            return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 InternalServerErrorTemplate { error_uuid },
             )
-                .into_response()
+                .into_response();
         }
     };
-    let events = match bookings.into_iter()
+    let events = match bookings
+        .into_iter()
         .map(|b| Event::create_from_booking(b, &config))
-        .collect::<Option<Vec<_>>>() {
-            Some(x) => x,
-            None => {
-                let error_uuid = Uuid::new_v4();
-                warn!("Sending internal server error because there was a problem assigning bookings to rooms.");
-                warn!("Error-UUID: {error_uuid}");
-                return 
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    InternalServerErrorTemplate { error_uuid },
-                )
-                    .into_response()
-            }
-        };
+        .collect::<Option<Vec<_>>>()
+    {
+        Some(x) => x,
+        None => {
+            let error_uuid = Uuid::new_v4();
+            warn!("Sending internal server error because there was a problem assigning bookings to rooms.");
+            warn!("Error-UUID: {error_uuid}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                InternalServerErrorTemplate { error_uuid },
+            )
+                .into_response();
+        }
+    };
 
     // push the templated table
-    LandingTemplate { events, }.into_response()
+    LandingTemplate { events }.into_response()
 }
-
