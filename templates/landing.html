@@ -1,98 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="UTF-8" />
-	<title>Telefon</title>
-	<script src="/scripts/htmx@2.0.2.js"></script>
-	<script src="/scripts/htmx@2.0.2_response_targets.js"></script>
+	<title>Raumbuchung</title>
 	<link rel="stylesheet" href="/style.css">
-	<script src="/scripts/hyperscript.org@0.9.12.js"></script>
 </head>
 
 <body hx-ext="response-targets" class="min-h-screen bg-neutral-700 text-sky-500 font-mono">
-	<header class="sticky top-0 z-40 backdrop-blur flex justify-center bg-neutral-900 border-zinc-400 border-b-4 w-full shadow-md">
-		<div class="flex justify-between w-4/5">
-			<div class="text-xl"> $whoami &rarr; <b>{{ username }}</b> </div>
-			<a class="text-xl h-8 w-12 bg-neutral-900 hover:bg-neutral-700 hover:rounded-2xl" href="/logout">
-				<svg class="h-8 w-8 translate-x-2"  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />  <path d="M7 12h14l-3 -3m0 6l3 -3" /></svg>
-			</a>
-		</div>
-	</header>
-
-	<main class="static translate-y-8 z-20">
-	<div class="relative flex justify-center m-12">
-		<div class="text-xl text-red-500" id="error_display" _="on htmx:beforeSend from elsewhere set my innerHTML to ''"></div>
-	</div>
-
-	<div class="relative flex justify-center m-14">
-		<button
-			class="text-xl text-sky-500 bg-lime-700/70 p-2 rounded-lg hover:rounded-2xl hover:bg-lime-700"
-			hx-get="/web/call-forward/new"
-			hx-target="#phantom_row"
-			hx-swap="afterend">
-				<svg class="h-20 w-20"  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" />  <path d="M15 6h6m-3 -3v6" /></svg>
-		</button>
-	</div>
-
+	<main class="static">
 	<div class="sticky top-0">
-		<div id="relative existing-forwards" class="flex justify-center bg-neutral-700 text-sky-300">
+		<div id="relative" class="flex justify-center bg-neutral-700 text-sky-300">
 			<div class="relative flex flex-col justify-evenly w-4/5">
-
-				<div class="sticky top-0 z-10 flex justify-evenly w-full p-2 border-zinc-400 border-2 bg-neutral-700">
-					<div class="td w-40 flex justify-center">Anruf für &darr;</div>
-					<div class="td w-40 flex justify-center">Weitergeleitet zu &darr; wenn von &rarr;</div>
-					{% for ctx in contexts %}
-						<div class="td w-20 flex justify-center">{{ ctx.display_name }}</div>
-					{% endfor %}
-					<div class="w-36"></div>
-				</div>
-
 				<div class="tr" id="phantom_row"></div>
-
-				{% for fwd in existing_forwards %}
+				{% for event in events %}
 					<div class="tr flex justify-evenly w-full p-2 border-zinc-400 border-2">
 						<div class="td w-40 text-neutral-200 font-mono border-2 flex flex-col justify-center">
-							<div class="flex justify-center text-balance">{{ fwd.from }}</div>
+							<div class="flex justify-center text-balance">{{ event.start_time }}</div>
 						</div>
 						<div class="td w-40 text-neutral-200 font-mono border-2 flex flex-col justify-center">
-							<div class="flex justify-center text-balance">{{ fwd.to }}</div>
+							<div class="flex justify-center text-balance">{{ event.name }}</div>
 						</div>
-						{% for ctx in contexts %}
-							<div class="w-20 flex justify-center">
-								{% if fwd.in_contexts.contains(ctx) %}
-								<div class="w-7 h-7 border-zinc-400 bg-sky-400"></div>
-								{% else %}
-								<div class="w-7 h-7"></div>
-								{% endif %}
-							</div>
-						{% endfor %}
-						<div class="td w-36 flex justify-center">
-						<button
-							hx-get="/web/call-forward/{{ fwd.fwd_id }}/edit"
-							hx-target="closest div.tr"
-							hx-swap="outerHTML"
-							hx-indicator="#indicator-from-show-{{ fwd.fwd_id }}"
-							class="h-12 w-12 bg-neutral-800 hover:bg-neutral-600 rounded-lg hover:rounded-2xl">
-							<svg  class="translate-x-2" width="30"  height="30"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round">  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
-						</button>
-						<button
-							hx-delete="/web/call-forward/{{ fwd.fwd_id }}"
-							hx-target="closest div.tr"
-							hx-swap="outerHTML"
-							hx-indicator="#indicator-from-show-{{ fwd.fwd_id }}"
-							class="h-12 w-12 bg-red-600/70 hover:bg-red-600/90 rounded-lg hover:rounded-2xl">
-							<svg class="translate-x-2 h-8 w-8 text-neutral-800"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2.5"  stroke-linecap="round"  stroke-linejoin="round">  <polyline points="3 6 5 6 21 6" />  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />  <line x1="10" y1="11" x2="10" y2="17" />  <line x1="14" y1="11" x2="14" y2="17" /></svg>
-						</button>
-							<div
-								class="htmx-indicator inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-e-transparent
-									align-[-0.125em]
-									text-surface
-									motion-reduce:animate-[spin_1.5s_linear_infinite]"
-								id="indicator-from-show-{{ fwd.fwd_id }}">
-							<span
-								class="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]"
-								>Lade.</span>
-							</div>
+						<div class="td w-40 text-neutral-200 font-mono border-2 flex flex-col justify-center">
+							<div class="flex justify-center text-balance">{{ event.room.name }} - {{ event.room.location_hint}} </div>
 						</div>
 					</div>
 				{% endfor %}

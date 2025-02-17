@@ -1,7 +1,7 @@
 //! The webserver component, creating html views into the cached data.
 
-use askama::Template;
-use sqlx::SqlitePool;
+use askama_axum::Template;
+use chrono::Utc;
 use uuid::Uuid;
 
 use std::{future::Future, str::FromStr, sync::Arc, time::Duration};
@@ -16,7 +16,7 @@ use axum::{
 };
 use tracing::{debug, event, Level};
 
-use crate::{config::Config, InShutdown};
+use crate::{config::{Config, RoomConfig}, Booking, InShutdown};
 
 #[derive(Template)]
 #[template(path = "500.html")]
@@ -41,12 +41,8 @@ pub async fn run_web_server(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .layer(Extension(config.clone()))
-        .route("/scripts/htmx@2.0.2.js", get(htmx_script))
-        .route(
-            "/scripts/htmx@2.0.2_response_targets.js",
-            get(htmx_script_response_targets),
-        )
         .route("/style.css", get(css_style))
+        .route("/", get(root))
         .fallback(fallback);
 
     // run it
@@ -70,6 +66,7 @@ pub async fn run_web_server(
     Ok(())
 }
 
+/// Take an HTTP URI and return the HTTPS equivalent
 fn make_https(
     host: String,
     uri: Uri,
@@ -90,6 +87,7 @@ fn make_https(
     Ok(Uri::from_parts(parts)?)
 }
 
+/// Server redirecting every HTTP request to HTTPS
 async fn redirect_http_to_https<F>(config: Arc<Config>, signal: F)
     where F: Future<Output = ()> + Send + 'static
 {
@@ -129,32 +127,6 @@ async fn redirect_http_to_https<F>(config: Arc<Config>, signal: F)
     };
 }
 
-async fn htmx_script() -> impl IntoResponse {
-    let mut headers = HeaderMap::new();
-    headers.insert(header::SERVER, "axum".parse().expect("static string"));
-    headers.insert(
-        header::CONTENT_TYPE,
-        "text/javascript".parse().expect("static string"),
-    );
-    (
-        headers,
-        include_str!("../../templates/static/htmx@2.0.2.js"),
-    )
-}
-
-async fn htmx_script_response_targets() -> impl IntoResponse {
-    let mut headers = HeaderMap::new();
-    headers.insert(header::SERVER, "axum".parse().expect("static string"));
-    headers.insert(
-        header::CONTENT_TYPE,
-        "text/javascript".parse().expect("static string"),
-    );
-    (
-        headers,
-        include_str!("../../templates/static/htmx@2.0.2_response_targets.js"),
-    )
-}
-
 async fn css_style() -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert(header::SERVER, "axum".parse().expect("static string"));
@@ -170,5 +142,27 @@ async fn fallback() -> impl IntoResponse {
         StatusCode::NOT_FOUND,
         Html(include_str!("../../templates/404.html"))
     )
+}
+
+#[derive(Debug)]
+struct Event {
+    name: String,
+    start_time: chrono::DateTime<Utc>,
+    room: RoomConfig,
+}
+
+
+#[derive(Debug, Template)]
+#[template(path = "landing.html")]
+struct LandingTemplate {
+    events: Vec<Event>,
+}
+
+async fn root() -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::SERVER, "axum".parse().expect("static string"));
+    // get the current booking states
+    // push the templated table
+    LandingTemplate { events: vec![] }.into_response()
 }
 
