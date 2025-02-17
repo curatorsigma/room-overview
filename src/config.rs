@@ -42,11 +42,11 @@ struct WebConfigData {
 }
 
 #[derive(Debug)]
-struct WebConfig {
-    addr: String,
-    port: u16,
-    tls_port: u16,
-    rustls_config: RustlsConfig,
+pub(crate) struct WebConfig {
+    pub(crate) addr: String,
+    pub(crate) port: u16,
+    pub(crate) tls_port: u16,
+    pub(crate) rustls_config: RustlsConfig,
 }
 impl WebConfig {
     async fn try_from_web_config_data(value: WebConfigData) -> Result<Self, ConfigError> {

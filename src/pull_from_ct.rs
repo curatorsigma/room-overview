@@ -117,7 +117,6 @@ async fn get_relevant_bookings(
     query_strings.push(("from", start_date.to_string()));
     query_strings.push(("to", end_date.to_string()));
     query_strings.push(("status_ids[]", "2".to_owned()));
-    // TODO: add login token to request
     let response = match reqwest::Client::new()
         .get(format!("https://{}/api/bookings", config.ct.host))
         .query(&query_strings)

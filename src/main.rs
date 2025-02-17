@@ -100,10 +100,14 @@ async fn signal_handler(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     let config = Arc::new(config::Config::create().await?);
     // Setup tracing
 
-    let my_crate_filter = EnvFilter::new("room-overview");
+    let my_crate_filter = EnvFilter::new("room_overview");
     let level_filter = filter::LevelFilter::from_str(&config.log_level)?;
     let subscriber = tracing_subscriber::registry().with(my_crate_filter).with(
         tracing_subscriber::fmt::layer()
@@ -113,6 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_filter(level_filter),
     );
     tracing::subscriber::set_global_default(subscriber).expect("static tracing config");
+    info!("some stuff should be printed here");
 
     // migrate the database
     sqlx::migrate!().run(&config.db).await?;
@@ -127,15 +132,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signal_handle = tokio::spawn(signal_handler(tx.subscribe(), tx.clone()));
 
     // start the web server
-    let web_server = ();
+    let web_server = web::run_web_server(config.clone(), tx.subscribe());
 
     // Join both tasks
-    let (gather_res, signal_res) = tokio::join!(
+    let (gather_res, signal_res, web_res) = tokio::join!(
         gatherer_handle,
-        signal_handle
+        signal_handle,
+        web_server,
     );
     gather_res?;
     signal_res??;
+    web_res?;
 
     Ok(())
 }

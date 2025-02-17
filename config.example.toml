@@ -32,7 +32,7 @@ addr = "0.0.0.0"
 # OPTIONAL, default 80
 port = 80
 # OPTIONAL, default 443
-https_port = 443
+tls_port = 443
 tls_cert_file = "/etc/ssl/room-overview/room-overview.crt"
 tls_key_file = "/etc/ssl/room-overview/room-overview.key"
 
