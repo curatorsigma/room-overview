@@ -24,6 +24,8 @@ struct Booking {
     resource_id: i64,
     /// The ID of this booking. This is used to update bookings when they are updated in CT.
     booking_id: i64,
+    /// Title of the booking in CT
+    title: String,
     /// The booking starts at...
     /// ALL DATETIMES ARE UTC.
     start_time: chrono::DateTime<Utc>,

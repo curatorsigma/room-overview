@@ -27,6 +27,7 @@ struct BookingsData {
 struct BookingsDataBase {
     /// this is the bookings ID
     id: i64,
+    title: String,
     resource: ResourceData,
 }
 
@@ -153,6 +154,7 @@ async fn get_relevant_bookings(
         .into_iter()
         .map(|x: BookingsData| {
             Ok::<Booking, CTApiError>(Booking {
+                title: x.base.title,
                 booking_id: x.base.id,
                 resource_id: x.base.resource.id,
                 start_time: chrono::DateTime::parse_from_rfc3339(&x.calculated.start_date)

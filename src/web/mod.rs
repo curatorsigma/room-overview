@@ -1,7 +1,7 @@
 //! The webserver component, creating html views into the cached data.
 
 use askama_axum::Template;
-use chrono::Utc;
+use chrono::{Local, TimeDelta, Utc};
 use uuid::Uuid;
 
 use std::{future::Future, str::FromStr, sync::Arc, time::Duration};
@@ -14,9 +14,9 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use tracing::{debug, event, Level};
+use tracing::{debug, event, warn, Level};
 
-use crate::{config::{Config, RoomConfig}, Booking, InShutdown};
+use crate::{config::{Config, RoomConfig}, db::get_bookings_in_timeframe, Booking, InShutdown};
 
 #[derive(Template)]
 #[template(path = "500.html")]
@@ -40,9 +40,9 @@ pub async fn run_web_server(
     watcher: tokio::sync::watch::Receiver<InShutdown>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
+        .route("/", get(root))
         .layer(Extension(config.clone()))
         .route("/style.css", get(css_style))
-        .route("/", get(root))
         .fallback(fallback);
 
     // run it
@@ -147,10 +147,19 @@ async fn fallback() -> impl IntoResponse {
 #[derive(Debug)]
 struct Event {
     name: String,
-    start_time: chrono::DateTime<Utc>,
+    start_time: chrono::DateTime<Local>,
     room: RoomConfig,
 }
-
+impl Event {
+    fn create_from_booking(value: Booking, config: &Config) -> Option<Self> {
+        let room = config.rooms.iter().find(|r| r.churchtools_id == value.resource_id)?;
+        Some(Self {
+            name: value.title,
+            start_time: value.start_time.into(),
+            room: room.clone(),
+        })
+    }
+}
 
 #[derive(Debug, Template)]
 #[template(path = "landing.html")]
@@ -158,11 +167,46 @@ struct LandingTemplate {
     events: Vec<Event>,
 }
 
-async fn root() -> impl IntoResponse {
+async fn root(
+        Extension(config): Extension<Arc<Config>>,
+    ) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert(header::SERVER, "axum".parse().expect("static string"));
     // get the current booking states
+    let start = Utc::now().naive_utc();
+    let end = start + TimeDelta::minutes(120);
+    let bookings = match get_bookings_in_timeframe(&config.db, start, end).await {
+        Ok(x) => x,
+        Err(e) => {
+            let error_uuid = Uuid::new_v4();
+            warn!("Sending internal server error because there was a problem getting bookings.");
+            warn!("DBError: {e} Error-UUID: {error_uuid}");
+            return 
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                InternalServerErrorTemplate { error_uuid },
+            )
+                .into_response()
+        }
+    };
+    let events = match bookings.into_iter()
+        .map(|b| Event::create_from_booking(b, &config))
+        .collect::<Option<Vec<_>>>() {
+            Some(x) => x,
+            None => {
+                let error_uuid = Uuid::new_v4();
+                warn!("Sending internal server error because there was a problem assigning bookings to rooms.");
+                warn!("Error-UUID: {error_uuid}");
+                return 
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    InternalServerErrorTemplate { error_uuid },
+                )
+                    .into_response()
+            }
+        };
+
     // push the templated table
-    LandingTemplate { events: vec![] }.into_response()
+    LandingTemplate { events, }.into_response()
 }
 

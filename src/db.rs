@@ -10,6 +10,7 @@ use crate::Booking;
 /// We ALWAYS STORE UTC DATETIMES IN SQLITE.
 struct NaiveBooking {
     booking_id: i64,
+    title: String,
     resource_id: i64,
     start_time: chrono::NaiveDateTime,
     end_time: chrono::NaiveDateTime,
@@ -19,6 +20,7 @@ impl NaiveBooking {
     fn interpret_as_utc(self) -> crate::Booking {
         Booking {
             booking_id: self.booking_id,
+            title: self.title,
             resource_id: self.resource_id,
             start_time: self.start_time.and_utc(),
             end_time: self.end_time.and_utc(),
@@ -60,7 +62,7 @@ impl std::error::Error for DBError {}
 async fn get_all_bookings(db: &Pool<Sqlite>) -> Result<Vec<Booking>, DBError> {
     Ok(sqlx::query_as!(
         NaiveBooking,
-        "SELECT booking_id, resource_id, start_time, end_time FROM bookings;"
+        "SELECT booking_id, title, resource_id, start_time, end_time FROM bookings;"
     )
     .fetch_all(db)
     .await
@@ -81,7 +83,7 @@ pub async fn get_bookings_in_timeframe(
     let end_str = end.format_with_items(fmt.clone()).to_string();
     Ok(sqlx::query_as!(
         NaiveBooking,
-        "SELECT booking_id, resource_id, start_time, end_time FROM bookings \
+        "SELECT booking_id, title, resource_id, start_time, end_time FROM bookings \
          WHERE start_time <= ? AND ? <= end_time;",
         end_str,
         start_str,
@@ -103,10 +105,11 @@ pub async fn insert_booking(db: &Pool<Sqlite>, booking: &Booking) -> Result<(), 
         .to_string();
     let end_str = booking.end_time.format_with_items(fmt.clone()).to_string();
     sqlx::query!(
-        "INSERT INTO bookings (booking_id, resource_id, start_time, end_time) VALUES \
-        (?, ?, ?, ?);
+        "INSERT INTO bookings (booking_id, title, resource_id, start_time, end_time) VALUES \
+        (?, ?, ?, ?, ?);
         ",
         booking.booking_id,
+        booking.title,
         booking.resource_id,
         start_str,
         end_str,

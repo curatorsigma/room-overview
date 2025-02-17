@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT booking_id, resource_id, start_time, end_time FROM bookings;",
+  "query": "SELECT booking_id, title, resource_id, start_time, end_time FROM bookings;",
   "describe": {
     "columns": [
       {
@@ -9,18 +9,23 @@
         "type_info": "Integer"
       },
       {
-        "name": "resource_id",
+        "name": "title",
         "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "resource_id",
+        "ordinal": 2,
         "type_info": "Integer"
       },
       {
         "name": "start_time",
-        "ordinal": 2,
+        "ordinal": 3,
         "type_info": "Datetime"
       },
       {
         "name": "end_time",
-        "ordinal": 3,
+        "ordinal": 4,
         "type_info": "Datetime"
       }
     ],
@@ -31,8 +36,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "0dd01da76c4615f78d3ba86f4fcf15fca66b608464df85d451578fc47475ae5d"
+  "hash": "ac0246a8e6dbc80a1c1ea539d8057f8069a7283c849834c7bebab5391bd98eeb"
 }

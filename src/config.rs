@@ -109,7 +109,7 @@ impl Config {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub(crate) struct RoomConfig {
     pub churchtools_id: i64,
     pub name: String,

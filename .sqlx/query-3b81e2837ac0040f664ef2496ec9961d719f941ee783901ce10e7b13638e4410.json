@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT booking_id, resource_id, start_time, end_time FROM bookings WHERE start_time <= ? AND ? <= end_time;",
+  "query": "SELECT booking_id, title, resource_id, start_time, end_time FROM bookings WHERE start_time <= ? AND ? <= end_time;",
   "describe": {
     "columns": [
       {
@@ -9,18 +9,23 @@
         "type_info": "Integer"
       },
       {
-        "name": "resource_id",
+        "name": "title",
         "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "resource_id",
+        "ordinal": 2,
         "type_info": "Integer"
       },
       {
         "name": "start_time",
-        "ordinal": 2,
+        "ordinal": 3,
         "type_info": "Datetime"
       },
       {
         "name": "end_time",
-        "ordinal": 3,
+        "ordinal": 4,
         "type_info": "Datetime"
       }
     ],
@@ -31,8 +36,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "56a08a4c766c0341b4778e787daac06ad88f7c56c57fbb2b3132a364b90acf14"
+  "hash": "3b81e2837ac0040f664ef2496ec9961d719f941ee783901ce10e7b13638e4410"
 }
