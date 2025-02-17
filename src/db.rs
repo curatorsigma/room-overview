@@ -225,6 +225,7 @@ mod tests {
         assert_eq!(
             bookings[0],
             Booking {
+                title: "title".to_owned(),
                 booking_id: 123,
                 resource_id: 10,
                 start_time: DateTime::parse_from_rfc3339("2021-03-26T15:30:00+00:00")
@@ -238,6 +239,7 @@ mod tests {
         assert_eq!(
             bookings[1],
             Booking {
+                title: "title".to_owned(),
                 booking_id: 125,
                 resource_id: 11,
                 start_time: DateTime::parse_from_rfc3339("2021-03-28T15:30:00+00:00")
@@ -265,6 +267,7 @@ mod tests {
         assert_eq!(
             bookings[0],
             Booking {
+                title: "title".to_owned(),
                 booking_id: 123,
                 resource_id: 10,
                 start_time: DateTime::parse_from_rfc3339("2021-03-26T15:30:00+00:00")
@@ -305,6 +308,7 @@ mod tests {
     #[sqlx::test(fixtures("001_good_data"))]
     async fn test_update_booking(pool: SqlitePool) {
         let new_booking = Booking {
+            title: "title".to_owned(),
             booking_id: 123,
             resource_id: 10,
             start_time: DateTime::parse_from_rfc3339("2021-04-26T15:30:00+00:00")
@@ -331,6 +335,7 @@ mod tests {
     #[sqlx::test(fixtures("001_good_data"))]
     async fn test_insert_booking(pool: SqlitePool) {
         let new_booking = Booking {
+            title: "title".to_owned(),
             booking_id: 12341234,
             resource_id: 21,
             start_time: DateTime::parse_from_rfc3339("2019-04-26T14:28:00+00:00")
@@ -360,6 +365,7 @@ mod tests {
         let now = chrono::Utc::now().with_nanosecond(0).unwrap();
         let in_an_hour = now + TimeDelta::hours(1);
         let booking_today = Booking {
+            title: "title".to_owned(),
             resource_id: 31,
             booking_id: 9999,
             start_time: now,
@@ -368,6 +374,7 @@ mod tests {
         let yesterday = now - TimeDelta::days(1);
         let yesterday_plus_one_hour = yesterday + TimeDelta::hours(1);
         let booking_yesterday = Booking {
+            title: "title".to_owned(),
             resource_id: 31,
             booking_id: 8888,
             start_time: yesterday,
