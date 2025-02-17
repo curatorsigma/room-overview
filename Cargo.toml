@@ -1,0 +1,29 @@
+[package]
+name = "room-overview"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jonathan Schleucher"]
+keywords = ["churchtools"]
+license = "MIT-0"
+readme = "README.md"
+
+[dependencies]
+axum = "0.7.5"
+axum-server = { version = "0.7.1", features = ["tls-rustls"] }
+chrono = { version = "0.4.38", features = ["clock", "serde"] }
+coe = "0.2.1"
+itertools = "0.13.0"
+reqwest = { version = "0.12.7", default-features = false, features = ["rustls-tls"] }
+serde = { version = "1.0.210", features = ["serde_derive"] }
+serde_json = "1.0.128"
+sqlx = { version = "0.8.2", features = ["chrono", "sqlite", "runtime-tokio-rustls"] }
+tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread", "signal", "time"] }
+tokio-util = "0.7.12"
+toml = { version = "0.8.19", features = ["preserve_order"] }
+toml_edit = "0.22.22"
+tracing = { version = "0.1.40", features = ["attributes"] }
+tracing-appender = "0.2.3"
+tracing-subscriber = { version = "0.3.18", features = ["time", "fmt", "env-filter"] }
+# only so that we can install a default crypto provider.
+# used only transitively by some other dependencies
+rustls = { version = "0.23.13", default-features = false, features = ["ring"]}

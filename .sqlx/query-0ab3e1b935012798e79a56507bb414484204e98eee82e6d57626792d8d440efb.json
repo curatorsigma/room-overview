@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE bookings SET resource_id = ?, start_time = ?, end_time = ? WHERE booking_id = ?;\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "0ab3e1b935012798e79a56507bb414484204e98eee82e6d57626792d8d440efb"
+}

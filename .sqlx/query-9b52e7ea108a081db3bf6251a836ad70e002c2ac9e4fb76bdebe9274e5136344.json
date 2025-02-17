@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM bookings WHERE booking_id = ?;\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "9b52e7ea108a081db3bf6251a836ad70e002c2ac9e4fb76bdebe9274e5136344"
+}

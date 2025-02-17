@@ -1,0 +1,38 @@
+# which verbosity level should be logged?
+# allowed values are:
+# error
+# warn
+# info
+# debug
+# trace
+log_level = "debug"
+
+[[rooms]]
+# room name, public facing
+name = "Room Name"
+# location hint, publich facing
+# OPTIONAL
+location_hint = "Main building, second floor."
+# ID of the corresponding resource in churchtools
+churchtools_id = 12
+
+[ct]
+# the hostname of your CT instance
+host = "example.church.tools"
+# The login token for the user to use
+# user needs read-access to the ressources defined above
+login_token = "NOT_THE_LOGIN_TOKEN"
+# the frequency with which data is pulled from CT, in sec
+ct_pull_frequency = 300
+
+[web]
+# bind address for web server
+addr = "0.0.0.0"
+# This port will ONLY be used to 301 into the https port.
+# OPTIONAL, default 80
+port = 80
+# OPTIONAL, default 443
+https_port = 443
+tls_cert_file = "/etc/ssl/room-overview/room-overview.crt"
+tls_key_file = "/etc/ssl/room-overview/room-overview.key"
+

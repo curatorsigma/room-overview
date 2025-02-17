@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+target/
+TODO.md
+config.example.yaml
+README.md
+.bookings.db
+
