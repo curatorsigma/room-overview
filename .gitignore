@@ -1,4 +1,5 @@
 /target
 .bookings.db
 tailwindcss
+.env
 

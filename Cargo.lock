@@ -407,15 +407,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "coe"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "291d99598da18276ed804b4733222713c15cb1a501d603dec9f200004095dad1"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1767,7 +1758,6 @@ dependencies = [
  "axum",
  "axum-server",
  "chrono",
- "coe",
  "itertools 0.13.0",
  "reqwest",
  "rustls",

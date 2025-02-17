@@ -13,7 +13,6 @@ askama = { version = "0.12.1", features = ["with-axum"] }
 axum = "0.7.5"
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
 chrono = { version = "0.4.38", features = ["clock", "serde"] }
-coe = "0.2.1"
 itertools = "0.13.0"
 reqwest = { version = "0.12.7", default-features = false, features = ["rustls-tls"] }
 # only so that we can install a default crypto provider.
