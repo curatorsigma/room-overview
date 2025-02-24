@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use chrono::Utc;
 
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use tracing_subscriber::{filter, fmt::format::FmtSpan};
 use tracing_subscriber::{prelude::*, EnvFilter};
 
@@ -120,7 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_filter(level_filter),
     );
     tracing::subscriber::set_global_default(subscriber).expect("static tracing config");
-    info!("some stuff should be printed here");
+    debug!("Tracing enabled");
 
     // migrate the database
     sqlx::migrate!().run(&config.db).await?;
