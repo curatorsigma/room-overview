@@ -9,6 +9,6 @@ CMD ["room-overview"]
 
 FROM alpine:latest
 WORKDIR /room-overview
-COPY --from=builder /usr/src/room-overview/target/release/room-overvievw ./
+COPY --from=builder /usr/src/room-overview/target/release/room-overview ./
 CMD ["./room-overview"]
 
