@@ -12,7 +12,7 @@ mod db;
 mod pull_from_ct;
 mod web;
 
-const BOOKING_DATABASE_NAME: &str = ".bookings.db";
+pub(crate) const BOOKING_DATABASE_NAME: &str = ".bookings.db";
 
 /// A single booking for a room
 #[derive(Debug, PartialEq)]

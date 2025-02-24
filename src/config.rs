@@ -5,6 +5,8 @@ use serde::Deserialize;
 use sqlx::{Pool, Sqlite, SqlitePool};
 use tracing::{event, Level};
 
+use crate::BOOKING_DATABASE_NAME;
+
 #[derive(Debug)]
 pub(crate) enum ConfigError {
     Tls(std::io::Error),
@@ -86,9 +88,9 @@ pub(crate) struct Config {
     pub web: WebConfig,
 }
 impl Config {
-    pub async fn try_from_config_data(value: ConfigData) -> Result<Self, ConfigError> {
+    async fn try_from_config_data(value: ConfigData) -> Result<Self, ConfigError> {
         let sqlite_connect_options = sqlx::sqlite::SqliteConnectOptions::new()
-            .filename(".bookings.db")
+            .filename(BOOKING_DATABASE_NAME)
             .create_if_missing(true);
         let db = SqlitePool::connect_with(sqlite_connect_options)
             .await
