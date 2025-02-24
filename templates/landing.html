@@ -11,22 +11,34 @@
 	<div class="sticky top-0">
 		<div id="relative" class="flex justify-center bg-neutral-700 text-sky-300">
 			<div class="relative flex flex-col justify-evenly w-4/5">
-				<div class="tr" id="phantom_row"></div>
-				{% for event in events %}
-					<div class="tr flex justify-evenly w-full p-2 border-zinc-400 border-2">
-						<div class="td w-40 text-neutral-200 font-mono border-2 flex flex-col justify-center">
-							<div class="flex justify-center text-balance">{{ event.start_time }}</div>
-						</div>
-						<div class="td w-40 text-neutral-200 font-mono border-2 flex flex-col justify-center">
-							<div class="flex justify-center text-balance">{{ event.name }}</div>
-						</div>
-						<div class="td w-40 text-neutral-200 font-mono border-2 flex flex-col justify-center">
-							<div class="flex justify-center text-balance">{{ event.room.name }}</div>
-						</div>
-						<div class="td w-40 text-neutral-200 font-mono border-2 flex flex-col justify-center">
-							<div class="flex justify-center text-balance">{{ event.room.location_hint}} </div>
-						</div>
+
+				<div id="event-header" class="tr flex justify-evenly w-full p-2 border-zinc-400 border-2 text-xl font-semibold">
+					<div class="td w-40 text-neutral-200 font-mono flex flex-col justify-center">
+						<div class="flex justify-center text-balance">Uhrzeit</div>
 					</div>
+					<div class="td w-40 text-neutral-200 font-mono flex flex-col justify-center">
+						<div class="flex justify-center text-balance">Veranstaltung</div>
+					</div>
+					<div class="td w-40 text-neutral-200 font-mono flex flex-col justify-center">
+						<div class="flex justify-center text-balance">Raum - Etage</div>
+					</div>
+				</div>
+				{% for event in events %}
+				{% if event.is_active() %}
+        <div class="tr flex justify-evenly w-full p-2 border-zinc-400 border-2 text-cyan-500">
+				{% else %}
+        <div class="tr flex justify-evenly w-full p-2 border-zinc-400 border-2 text-neutral-200">
+				{% endif %}
+					<div class="td w-40 font-mono flex flex-col justify-center">
+							<div class="flex justify-center text-balance">{{ event.hr_start_time() }}</div>
+					</div>
+					<div class="td w-40 font-mono flex flex-col justify-center">
+							<div class="flex justify-center text-balance">{{ event.name }}</div>
+					</div>
+					<div class="td w-40 font-mono flex flex-col justify-center">
+							<div class="flex justify-center text-balance">{{ event.room.name }} - {{ event.room.location_hint }}</div>
+					</div>
+				</div>
 				{% endfor %}
 			</div>
 		</div>

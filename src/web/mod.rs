@@ -160,6 +160,7 @@ async fn fallback() -> impl IntoResponse {
 struct Event {
     name: String,
     start_time: chrono::DateTime<Local>,
+    end_time: chrono::DateTime<Local>,
     room: RoomConfig,
 }
 impl Event {
@@ -171,8 +172,18 @@ impl Event {
         Some(Self {
             name: value.title,
             start_time: value.start_time.into(),
+            end_time: value.end_time.into(),
             room: room.clone(),
         })
+    }
+
+    fn is_active(&self) -> bool {
+        let current_time = Utc::now();
+        self.start_time <= current_time && current_time <= self.end_time
+    }
+
+    fn hr_start_time(&self) -> String {
+        format!("{}", self.start_time.format("%d.%m. %H:%m"))
     }
 }
 
