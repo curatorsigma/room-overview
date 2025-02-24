@@ -183,7 +183,8 @@ impl Event {
     }
 
     fn hr_start_time(&self) -> String {
-        format!("{}", self.start_time.format("%d.%m. %H:%M"))
+        let start_time_in_europe_berlin = self.start_time.with_timezone(&chrono_tz::Europe::Berlin);
+        format!("{}", start_time_in_europe_berlin.format("%d.%m. %H:%M"))
     }
 }
 

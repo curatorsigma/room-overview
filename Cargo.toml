@@ -1,6 +1,6 @@
 [package]
 name = "room-overview"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["Jonathan Schleucher"]
 keywords = ["churchtools"]
@@ -29,3 +29,4 @@ tracing = { version = "0.1.40", features = ["attributes"] }
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.18", features = ["time", "fmt", "env-filter"] }
 uuid = { version = "1.10.0", features = ["v4"] }
+chrono-tz = "0.10.1"
