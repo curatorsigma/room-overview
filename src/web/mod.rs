@@ -183,7 +183,7 @@ impl Event {
     }
 
     fn hr_start_time(&self) -> String {
-        format!("{}", self.start_time.format("%d.%m. %H:%m"))
+        format!("{}", self.start_time.format("%d.%m. %H:%M"))
     }
 }
 
