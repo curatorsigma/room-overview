@@ -4,17 +4,15 @@ use askama_axum::Template;
 use chrono::{Local, TimeDelta, Utc};
 use uuid::Uuid;
 
-use std::{future::Future, str::FromStr, sync::Arc, time::Duration};
+use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{
-    extract::Host,
-    handler::HandlerWithoutStateExt,
-    http::{header, HeaderMap, StatusCode, Uri},
-    response::{Html, IntoResponse, Redirect},
+    http::{header, HeaderMap, StatusCode},
+    response::{Html, IntoResponse},
     routing::get,
     Extension, Router,
 };
-use tracing::{debug, event, info, warn, Level};
+use tracing::{debug, event, warn, Level};
 
 use crate::{
     config::{Config, RoomConfig},
