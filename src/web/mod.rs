@@ -72,14 +72,13 @@ pub async fn run_web_server(
             ))
             .expect("Should be able to parse socket addr_tls");
             // serve the main app on HTTPS
-            let https_future = axum_server::bind_rustls(addr, rustls_conf.clone())
+            let https_future = axum_server::bind_rustls(addr_tls, rustls_conf.clone())
                 .handle(shutdown_handle.clone())
                 .serve(app.into_make_service());
             event!(Level::INFO, "Webserver (HTTP) listening on {}", addr);
             event!(Level::INFO, "Webserver (HTTPS) listening on {}", addr_tls);
             tokio::select! {
                 r = http_future => {
-                    tracing::error!("completed http");
                     match r {
                         Ok(()) => {}
                         Err(e) => {
