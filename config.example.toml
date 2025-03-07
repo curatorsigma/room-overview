@@ -28,11 +28,12 @@ ct_pull_frequency = 300
 [web]
 # bind address for web server
 addr = "0.0.0.0"
-# This port will ONLY be used to 301 into the https port.
-# OPTIONAL, default 80
+# OPTIONAL DEFAULT 80
 port = 80
-# OPTIONAL, default 443
+# OPTIONAL DEFAULT 443
 tls_port = 443
+# OPTIONAL DEFAULT DO NOT USE HTTPS
 tls_cert_file = "/etc/ssl/room-overview/room-overview.crt"
+# OPTIONAL DEFAULT DO NOT USE HTTPS
 tls_key_file = "/etc/ssl/room-overview/room-overview.key"
 

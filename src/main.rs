@@ -135,7 +135,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signal_handle = tokio::spawn(signal_handler(tx.subscribe(), tx.clone()));
 
     // start the web server
-    let web_server = web::run_web_server(config.clone(), tx.subscribe());
+    let web_server = web::run_web_server(config.clone(), tx.subscribe(), tx.clone());
 
     // Join both tasks
     let (gather_res, signal_res, web_res) =
