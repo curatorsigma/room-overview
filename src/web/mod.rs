@@ -164,7 +164,9 @@ impl Event {
 
     fn hr_start_time(&self) -> String {
         let start_time_in_europe_berlin = self.start_time.with_timezone(&chrono_tz::Europe::Berlin);
-        format!("{}", start_time_in_europe_berlin.format("%d.%m. %H:%M"))
+        // this must be safe to render without html escaping - it is NOT escaped by the template
+        // itself
+        format!("{}", start_time_in_europe_berlin.format("%d.%m.<br/>%H:%M"))
     }
 }
 
