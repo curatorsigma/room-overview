@@ -1825,7 +1825,7 @@ dependencies = [
 
 [[package]]
 name = "room-overview"
-version = "0.2.4"
+version = "0.2.6"
 dependencies = [
  "askama",
  "askama_axum",
