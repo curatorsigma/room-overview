@@ -37,10 +37,10 @@ impl core::error::Error for ConfigError {}
 #[derive(Debug, Deserialize)]
 struct WebConfigData {
     addr: String,
-    port: u16,
-    tls_port: u16,
-    tls_cert_file: String,
-    tls_key_file: String,
+    port: Option<u16>,
+    tls_port: Option<u16>,
+    tls_cert_file: Option<String>,
+    tls_key_file: Option<String>,
 }
 
 #[derive(Debug)]
@@ -48,13 +48,19 @@ pub(crate) struct WebConfig {
     pub(crate) addr: String,
     pub(crate) port: u16,
     pub(crate) tls_port: u16,
-    pub(crate) rustls_config: RustlsConfig,
+    pub(crate) rustls_config: Option<RustlsConfig>,
 }
 impl WebConfig {
     async fn try_from_web_config_data(value: WebConfigData) -> Result<Self, ConfigError> {
-        let rustls_config =
-            match RustlsConfig::from_pem_file(value.tls_cert_file, value.tls_key_file).await {
-                Ok(x) => x,
+        let do_tls = value.tls_cert_file.is_some() && value.tls_key_file.is_some();
+        let rustls_config = if do_tls {
+            match RustlsConfig::from_pem_file(
+                value.tls_cert_file.expect("checked is_some"),
+                value.tls_key_file.expect("checked is_some"),
+            )
+            .await
+            {
+                Ok(x) => Some(x),
                 Err(e) => {
                     event!(
                         Level::ERROR,
@@ -62,11 +68,14 @@ impl WebConfig {
                     );
                     return Err(ConfigError::Tls(e));
                 }
-            };
+            }
+        } else {
+            None
+        };
         Ok(Self {
             addr: value.addr,
-            port: value.port,
-            tls_port: value.tls_port,
+            port: value.port.unwrap_or(80),
+            tls_port: value.tls_port.unwrap_or(443),
             rustls_config,
         })
     }

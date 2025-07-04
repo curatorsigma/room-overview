@@ -3,44 +3,36 @@
 <head>
   <meta charset="UTF-8" />
 	<title>Raumbuchung</title>
-	<link rel="stylesheet" href="/style.css">
+	<link rel="stylesheet" href="./style.css">
 </head>
 
 <body hx-ext="response-targets" class="min-h-screen bg-neutral-700 text-sky-500 font-mono">
 	<main class="static">
 	<div class="sticky top-0">
-		<div id="relative" class="flex justify-center bg-neutral-700 text-sky-300">
-			<div class="relative flex flex-col justify-evenly w-4/5">
+		<div id="relative" class="bg-neutral-700 text-sky-300 flex justify-center">
+			<table class="table-auto w-5/6 text-left">
+				<thead>
 
-				<div id="event-header" class="tr flex justify-evenly w-full p-2 border-zinc-400 border-2 text-xl font-semibold">
-					<div class="td w-40 text-neutral-200 font-mono flex flex-col justify-center">
-						<div class="flex justify-center text-balance">Uhrzeit</div>
-					</div>
-					<div class="td w-40 text-neutral-200 font-mono flex flex-col justify-center">
-						<div class="flex justify-center text-balance">Veranstaltung</div>
-					</div>
-					<div class="td w-40 text-neutral-200 font-mono flex flex-col justify-center">
-						<div class="flex justify-center text-balance">Raum - Etage</div>
-					</div>
-				</div>
+				<tr id="event-header" class="border-2 border-zinc-400 p-2 text-4xl font-semibold font-mono text-neutral-200">
+					<th class="pt-4 pb-4">Uhrzeit</th>
+					<th>Veranstaltung</th>
+					<th>Raum - Etage</th>
+				</tr>
+				</thead>
+				<tbody>
 				{% for event in events %}
 				{% if event.is_active() %}
-        <div class="tr flex justify-evenly w-full p-2 border-zinc-400 border-2 text-cyan-500">
+        			<tr class="border-2 border-zinc-400 text-cyan-400 font-mono text-3xl">
 				{% else %}
-        <div class="tr flex justify-evenly w-full p-2 border-zinc-400 border-2 text-neutral-200">
+        			<tr class="border-2 border-zinc-400 text-neutral-200 font-mono text-3xl">
 				{% endif %}
-					<div class="td w-40 font-mono flex flex-col justify-center">
-							<div class="flex justify-center text-balance">{{ event.hr_start_time() }}</div>
-					</div>
-					<div class="td w-40 font-mono flex flex-col justify-center">
-							<div class="flex justify-center text-balance">{{ event.name }}</div>
-					</div>
-					<div class="td w-40 font-mono flex flex-col justify-center">
-							<div class="flex justify-center text-balance">{{ event.room.name }} - {{ event.room.location_hint }}</div>
-					</div>
-				</div>
+					<td class="pt-4 pb-4 p-2">{{ event.hr_start_time()|safe}}</td>
+					<td class="p-2">{{ event.name }}</td>
+					<td class="p-2">{{ event.room.name }} -<br/>{{ event.room.location_hint }}</td>
+				</tr>
 				{% endfor %}
-			</div>
+				</tbody>
+			</table>
 		</div>
 	</div>
 	</main>

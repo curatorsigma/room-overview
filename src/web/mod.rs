@@ -4,14 +4,12 @@ use askama_axum::Template;
 use chrono::{Local, TimeDelta, Utc};
 use uuid::Uuid;
 
-use core::{future::Future, str::FromStr, time::Duration};
+use core::{str::FromStr, time::Duration};
 use std::sync::Arc;
 
 use axum::{
-    extract::Host,
-    handler::HandlerWithoutStateExt,
-    http::{header, HeaderMap, StatusCode, Uri},
-    response::{Html, IntoResponse, Redirect},
+    http::{header, HeaderMap, StatusCode},
+    response::{Html, IntoResponse},
     routing::get,
     Extension, Router,
 };
@@ -45,6 +43,7 @@ async fn shutdown_signal(
 pub async fn run_web_server(
     config: Arc<Config>,
     watcher: tokio::sync::watch::Receiver<InShutdown>,
+    shutdown_tx: tokio::sync::watch::Sender<InShutdown>,
 ) -> Result<(), Box<dyn core::error::Error>> {
     let app = Router::new()
         .route("/", get(root))
@@ -62,82 +61,69 @@ pub async fn run_web_server(
     let shutdown_handle = axum_server::Handle::new();
     let shutdown_future = shutdown_signal(shutdown_handle.clone(), watcher.clone());
 
-    // run the redirect service HTTPS -> HTTP on its own port
-    tokio::spawn(redirect_http_to_https(config.clone(), shutdown_future));
+    let addr =
+        std::net::SocketAddr::from_str(&format!("{}:{}", &config.web.addr, &config.web.port))
+            .expect("Should be able to parse socket addr");
+    // serve the main app on HTTP
+    let http_future = axum_server::bind(addr)
+        .handle(shutdown_handle.clone())
+        .serve(app.clone().into_make_service());
 
-    // serve the main app on HTTPS
-    axum_server::bind_rustls(addr, config.web.rustls_config.clone())
-        .handle(shutdown_handle)
-        .serve(app.into_make_service())
-        .await
-        .expect("Should be able to start service");
+    match &config.web.rustls_config {
+        Some(rustls_conf) => {
+            let addr_tls = std::net::SocketAddr::from_str(&format!(
+                "{}:{}",
+                &config.web.addr, &config.web.tls_port
+            ))
+            .expect("Should be able to parse socket addr_tls");
+            // serve the main app on HTTPS
+            let https_future = axum_server::bind_rustls(addr_tls, rustls_conf.clone())
+                .handle(shutdown_handle.clone())
+                .serve(app.into_make_service());
+            event!(Level::INFO, "Webserver (HTTP) listening on {}", addr);
+            event!(Level::INFO, "Webserver (HTTPS) listening on {}", addr_tls);
+            tokio::select! {
+                r = http_future => {
+                    match r {
+                        Ok(()) => {}
+                        Err(e) => {
+                            tracing::error!("Failure while executing http server: {e}. Shutting down now.");
+                            shutdown_tx.send_replace(InShutdown::Yes);
+                        }
+                    };
+                }
+                r1 = https_future => {
+                    match r1 {
+                        Ok(()) => {}
+                        Err(e) => {
+                            tracing::error!("Failure while executing https server: {e}. Shutting down now.");
+                            shutdown_tx.send_replace(InShutdown::Yes);
+                        }
+                    };
+                }
+                _ = shutdown_future => {
+                }
+            };
+        }
+        None => {
+            event!(Level::INFO, "Webserver (HTTP) listening on {}", addr);
+            tokio::select! {
+                r = http_future => {
+                    match r {
+                        Ok(()) => {}
+                        Err(e) => {
+                            tracing::error!("Failure while executing http server: {e}. Shutting down now.");
+                            shutdown_tx.send_replace(InShutdown::Yes);
+                        }
+                    };
+                }
+                _ = shutdown_future => {
+                }
+            };
+        }
+    }
 
     Ok(())
-}
-
-/// Take an HTTP URI and return the HTTPS equivalent
-fn make_https(
-    host: String,
-    uri: Uri,
-    http_port: u16,
-    https_port: u16,
-) -> Result<Uri, Box<dyn core::error::Error>> {
-    let mut parts = uri.into_parts();
-
-    parts.scheme = Some(axum::http::uri::Scheme::HTTPS);
-
-    if parts.path_and_query.is_none() {
-        parts.path_and_query = Some("/".parse().expect("Path should be statically save."));
-    }
-
-    let https_host = host.replace(&http_port.to_string(), &https_port.to_string());
-    parts.authority = Some(https_host.parse()?);
-
-    Ok(Uri::from_parts(parts)?)
-}
-
-/// Server redirecting every HTTP request to HTTPS
-async fn redirect_http_to_https<F>(config: Arc<Config>, signal: F)
-where
-    F: Future<Output = ()> + Send + 'static,
-{
-    let redir_web_bind_port = config.web.port;
-    let redir_web_bind_port_tls = config.web.tls_port;
-    let redirect = move |Host(host): Host, uri: Uri| async move {
-        match make_https(host, uri, redir_web_bind_port, redir_web_bind_port_tls) {
-            Ok(uri) => Ok(Redirect::permanent(&uri.to_string())),
-            Err(error) => {
-                tracing::warn!(%error, "failed to convert URI to HTTPS");
-                Err(StatusCode::BAD_REQUEST)
-            }
-        }
-    };
-
-    let listener =
-        match tokio::net::TcpListener::bind(format!("{}:{}", &config.web.addr, config.web.port))
-            .await
-        {
-            Ok(x) => x,
-            Err(e) => {
-                tracing::error!(
-                    "Could not bind a TcP socket for the http -> https redirect service: {e}"
-                );
-                panic!("Unable to start http -> https server. Unrecoverable.");
-            }
-        };
-    tracing::info!(
-        "Webserver (HTTP) listening on {}",
-        listener
-            .local_addr()
-            .expect("Local address of bound http -> https should be readable.")
-    );
-    if let Err(e) = axum::serve(listener, redirect.into_make_service())
-        .with_graceful_shutdown(signal)
-        .await
-    {
-        tracing::error!("Could not start the http -> https redirect server: {e}");
-        panic!("Unable to start http -> https server. Unrecoverable.");
-    }
 }
 
 async fn css_style() -> impl IntoResponse {
@@ -188,7 +174,9 @@ impl Event {
     /// human readable start time for this event
     fn hr_start_time(&self) -> String {
         let start_time_in_europe_berlin = self.start_time.with_timezone(&chrono_tz::Europe::Berlin);
-        format!("{}", start_time_in_europe_berlin.format("%d.%m. %H:%M"))
+        // this must be safe to render without html escaping - it is NOT escaped by the template
+        // itself
+        format!("{}", start_time_in_europe_berlin.format("%d.%m.<br/>%H:%M"))
     }
 
     /// start time formatted as ics
