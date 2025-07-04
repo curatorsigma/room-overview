@@ -119,6 +119,11 @@ pub(crate) struct RoomConfig {
     pub name: String,
     pub location_hint: String,
 }
+impl RoomConfig {
+    pub(crate) fn ics_location(&self) -> String {
+        format!("{} - {}", self.name, self.location_hint)
+    }
+}
 
 #[derive(Deserialize)]
 pub(crate) struct ChurchToolsConfig {

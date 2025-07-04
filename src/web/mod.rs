@@ -14,7 +14,7 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use tracing::{debug, event, warn, Level};
+use tracing::{debug, event, info, warn, Level};
 
 use crate::{
     config::{Config, RoomConfig},
@@ -48,6 +48,7 @@ pub async fn run_web_server(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/", get(root))
+        .route("/all_rooms.ics", get(all_rooms_ics))
         .layer(Extension(config.clone()))
         .route("/style.css", get(css_style))
         .fallback(fallback);
@@ -164,6 +165,7 @@ struct Event {
     room: RoomConfig,
 }
 impl Event {
+    /// Create this event from a churchtools booking
     fn create_from_booking(value: Booking, config: &Config) -> Option<Self> {
         let room = config
             .rooms
@@ -177,14 +179,42 @@ impl Event {
         })
     }
 
+    /// Is this event currently running?
     fn is_active(&self) -> bool {
         let current_time = Utc::now();
         self.start_time <= current_time && current_time <= self.end_time
     }
 
+    /// human readable start time for this event
     fn hr_start_time(&self) -> String {
         let start_time_in_europe_berlin = self.start_time.with_timezone(&chrono_tz::Europe::Berlin);
         format!("{}", start_time_in_europe_berlin.format("%d.%m. %H:%M"))
+    }
+
+    /// start time formatted as ics
+    fn ics_start_time(&self) -> String {
+        let start_time_in_europe_berlin = self.start_time.with_timezone(&chrono_tz::Europe::Berlin);
+        start_time_in_europe_berlin
+            .format("%Y%m%dT%H%M%s")
+            .to_string()
+    }
+
+    /// start time formatted as ics
+    fn ics_end_time(&self) -> String {
+        let start_time_in_europe_berlin = self.end_time.with_timezone(&chrono_tz::Europe::Berlin);
+        start_time_in_europe_berlin
+            .format("%Y%m%dT%H%M%s")
+            .to_string()
+    }
+
+    fn ics_event(self) -> ics::Event<'static> {
+        let created_at = Utc::now().naive_utc();
+        let mut ics_event = ics::Event::new(Uuid::new_v4().to_string(), created_at.to_string());
+        ics_event.push(ics::properties::DtStart::new(self.ics_start_time()));
+        ics_event.push(ics::properties::DtEnd::new(self.ics_end_time()));
+        ics_event.push(ics::properties::Location::new(self.room.ics_location()));
+        ics_event.push(ics::properties::Summary::new(self.name));
+        ics_event
     }
 }
 
@@ -233,4 +263,56 @@ async fn root(Extension(config): Extension<Arc<Config>>) -> impl IntoResponse {
 
     // push the templated table
     LandingTemplate { events }.into_response()
+}
+
+async fn all_rooms_ics(Extension(config): Extension<Arc<Config>>) -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::SERVER, "axum".parse().expect("static string"));
+    // get the current booking states
+    let start = Utc::now().naive_utc();
+    let end = start + TimeDelta::minutes(120);
+    let bookings = match get_bookings_in_timeframe(&config.db, start, end).await {
+        Ok(x) => x,
+        Err(e) => {
+            let error_uuid = Uuid::new_v4();
+            warn!("Sending internal server error because there was a problem getting bookings.");
+            warn!("DBError: {e} Error-UUID: {error_uuid}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                InternalServerErrorTemplate { error_uuid },
+            )
+                .into_response();
+        }
+    };
+    let events = match bookings
+        .into_iter()
+        .map(|b| Event::create_from_booking(b, &config))
+        .collect::<Option<Vec<_>>>()
+    {
+        Some(x) => x,
+        None => {
+            let error_uuid = Uuid::new_v4();
+            warn!("Sending internal server error because there was a problem assigning bookings to rooms.");
+            warn!("Error-UUID: {error_uuid}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                InternalServerErrorTemplate { error_uuid },
+            )
+                .into_response();
+        }
+    };
+
+    // Create a new ics string
+    let mut calendar = ics::ICalendar::new("2.0", "ics-rs");
+    for event in events {
+        calendar.add_event(event.ics_event());
+    }
+    let mut resp_headers = HeaderMap::new();
+    resp_headers.insert(
+        "content-type",
+        "text/calendar;charset=utf-8"
+            .parse()
+            .expect("static string"),
+    );
+    (StatusCode::OK, resp_headers, calendar.to_string()).into_response()
 }

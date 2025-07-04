@@ -30,3 +30,4 @@ tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.18", features = ["time", "fmt", "env-filter"] }
 uuid = { version = "1.10.0", features = ["v4"] }
 chrono-tz = "0.10.1"
+ics = "0.5.8"
