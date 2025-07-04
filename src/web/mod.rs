@@ -181,23 +181,26 @@ impl Event {
 
     /// start time formatted as ics
     fn ics_start_time(&self) -> String {
-        let start_time_in_europe_berlin = self.start_time.with_timezone(&chrono_tz::Europe::Berlin);
-        start_time_in_europe_berlin
-            .format("%Y%m%dT%H%M%s")
+        self.start_time
+            .with_timezone(&Utc)
+            .format("%Y%m%dT%H%M%SZ")
             .to_string()
     }
 
     /// start time formatted as ics
     fn ics_end_time(&self) -> String {
-        let start_time_in_europe_berlin = self.end_time.with_timezone(&chrono_tz::Europe::Berlin);
-        start_time_in_europe_berlin
-            .format("%Y%m%dT%H%M%s")
+        self.end_time
+            .with_timezone(&Utc)
+            .format("%Y%m%dT%H%M%SZ")
             .to_string()
     }
 
     fn ics_event(self) -> ics::Event<'static> {
         let created_at = Utc::now().naive_utc();
-        let mut ics_event = ics::Event::new(Uuid::new_v4().to_string(), created_at.to_string());
+        let mut ics_event = ics::Event::new(
+            Uuid::new_v4().to_string(),
+            created_at.format("%Y%m%dT%H%M%SZ").to_string(),
+        );
         ics_event.push(ics::properties::DtStart::new(self.ics_start_time()));
         ics_event.push(ics::properties::DtEnd::new(self.ics_end_time()));
         ics_event.push(ics::properties::Location::new(self.room.ics_location()));
