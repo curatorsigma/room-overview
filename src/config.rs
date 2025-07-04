@@ -32,7 +32,7 @@ impl core::fmt::Display for ConfigError {
         }
     }
 }
-impl std::error::Error for ConfigError {}
+impl core::error::Error for ConfigError {}
 
 #[derive(Debug, Deserialize)]
 struct WebConfigData {
@@ -131,8 +131,8 @@ pub(crate) struct ChurchToolsConfig {
     pub login_token: String,
     pub ct_pull_frequency: u64,
 }
-impl std::fmt::Debug for ChurchToolsConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Debug for ChurchToolsConfig {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("ChurchToolsConfig")
             .field("host", &self.host)
             .field("login_token", &"[redacated]")

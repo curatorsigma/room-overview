@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use core::str::FromStr;
 use std::sync::Arc;
 
 use chrono::Utc;
@@ -102,7 +102,7 @@ async fn signal_handler(
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn core::error::Error>> {
     rustls::crypto::ring::default_provider()
         .install_default()
         .expect("Failed to install rustls crypto provider");

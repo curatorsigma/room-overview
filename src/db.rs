@@ -6,7 +6,7 @@ use tracing::info;
 
 use crate::Booking;
 
-/// sqlite does not have tz-aware types, so we can only get NaiveDateTime from it.
+/// sqlite does not have tz-aware types, so we can only get [`NaiveDateTime`] from it.
 /// We ALWAYS STORE UTC DATETIMES IN SQLITE.
 struct NaiveBooking {
     booking_id: i64,
@@ -35,8 +35,8 @@ pub enum DBError {
     DeleteBooking(sqlx::Error),
     UpdateBooking(sqlx::Error),
 }
-impl std::fmt::Display for DBError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for DBError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Self::SelectBookings(e) => {
                 write!(
@@ -56,7 +56,7 @@ impl std::fmt::Display for DBError {
         }
     }
 }
-impl std::error::Error for DBError {}
+impl core::error::Error for DBError {}
 
 #[allow(dead_code)]
 async fn get_all_bookings(db: &Pool<Sqlite>) -> Result<Vec<Booking>, DBError> {
@@ -68,7 +68,7 @@ async fn get_all_bookings(db: &Pool<Sqlite>) -> Result<Vec<Booking>, DBError> {
     .await
     .map_err(DBError::SelectBookings)?
     .into_iter()
-    .map(|x| x.interpret_as_utc())
+    .map(NaiveBooking::interpret_as_utc)
     .collect::<Vec<_>>())
 }
 
@@ -92,7 +92,7 @@ pub async fn get_bookings_in_timeframe(
     .await
     .map_err(DBError::SelectBookings)?
     .into_iter()
-    .map(|x| x.interpret_as_utc())
+    .map(NaiveBooking::interpret_as_utc)
     .collect::<Vec<_>>())
 }
 
@@ -144,7 +144,7 @@ pub async fn delete_booking(db: &Pool<Sqlite>, booking_id: i64) -> Result<(), DB
     .map_err(DBError::DeleteBooking)
 }
 
-pub async fn delete_bookings<'a, I: Iterator<Item = i64>>(
+pub async fn delete_bookings<I: Iterator<Item = i64>>(
     db: &Pool<Sqlite>,
     bookings: I,
 ) -> Result<(), DBError> {
@@ -182,7 +182,7 @@ pub async fn update_bookings<'a, I: Iterator<Item = &'a Booking>>(
 ) -> Result<(), DBError> {
     for b in bookings {
         update_booking(db, b).await?;
-        info!("Updated Booking {}. Is now: {:?}", b.booking_id, b)
+        info!("Updated Booking {}. Is now: {:?}", b.booking_id, b);
     }
     Ok(())
 }

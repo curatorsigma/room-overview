@@ -48,8 +48,8 @@ pub enum CTApiError {
     Utf8Decode,
     ParseTime(chrono::ParseError),
 }
-impl std::fmt::Display for CTApiError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for CTApiError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Self::GetBookings(e) => {
                 write!(f, "Cannot get bookings. reqwest Error: {e}")
@@ -69,7 +69,7 @@ impl std::fmt::Display for CTApiError {
         }
     }
 }
-impl std::error::Error for CTApiError {}
+impl core::error::Error for CTApiError {}
 
 /// Something went wrong while gathering Information from CT into the DB
 #[derive(Debug)]
@@ -77,15 +77,15 @@ pub enum GatherError {
     DB(crate::db::DBError),
     CT(CTApiError),
 }
-impl std::fmt::Display for GatherError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for GatherError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Self::DB(x) => write!(f, "DBError: {x}"),
             Self::CT(x) => write!(f, "CTApiError: {x}"),
         }
     }
 }
-impl std::error::Error for GatherError {}
+impl core::error::Error for GatherError {}
 impl From<DBError> for GatherError {
     fn from(value: DBError) -> Self {
         Self::DB(value)
@@ -230,7 +230,7 @@ pub async fn keep_db_up_to_date(
             Err(e) => {
                 warn!("Failed to update db from CT. Error encountered: {e}");
             }
-        };
+        }
         // prune old entries in db
         let db_prune_res = crate::db::prune_old_bookings(&config.db).await;
         match db_prune_res {
@@ -241,7 +241,7 @@ pub async fn keep_db_up_to_date(
             Err(e) => {
                 warn!("Failed to prune db. Error encountered: {e}");
             }
-        };
+        }
         // stop on cancellation or continue after the next tick
         tokio::select! {
             _ = watcher.changed() => {

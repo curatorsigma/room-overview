@@ -6,6 +6,8 @@ authors = ["Jonathan Schleucher"]
 keywords = ["churchtools"]
 license = "MIT-0"
 readme = "README.md"
+repository = "https://github.com/curatorsigma/room-overview"
+description = "Pull resource booking from churchtools and present it as html or ics to the user."
 
 [dependencies]
 askama_axum = "0.4.0"

@@ -4,7 +4,8 @@ use askama_axum::Template;
 use chrono::{Local, TimeDelta, Utc};
 use uuid::Uuid;
 
-use std::{future::Future, str::FromStr, sync::Arc, time::Duration};
+use core::{future::Future, str::FromStr, time::Duration};
+use std::sync::Arc;
 
 use axum::{
     extract::Host,
@@ -14,7 +15,7 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use tracing::{debug, event, info, warn, Level};
+use tracing::{debug, event, warn, Level};
 
 use crate::{
     config::{Config, RoomConfig},
@@ -36,7 +37,6 @@ async fn shutdown_signal(
         _ = watcher.changed() => {
             debug!("Shutting down web server now.");
             handle.graceful_shutdown(Some(Duration::from_secs(5)));
-            return;
         }
     }
 }
@@ -45,7 +45,7 @@ async fn shutdown_signal(
 pub async fn run_web_server(
     config: Arc<Config>,
     watcher: tokio::sync::watch::Receiver<InShutdown>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn core::error::Error>> {
     let app = Router::new()
         .route("/", get(root))
         .route("/all_rooms.ics", get(all_rooms_ics))
@@ -55,7 +55,7 @@ pub async fn run_web_server(
 
     // run it
     let addr =
-        std::net::SocketAddr::from_str(&format!("{}:{}", &config.web.addr, &config.web.tls_port))
+        core::net::SocketAddr::from_str(&format!("{}:{}", &config.web.addr, &config.web.tls_port))
             .expect("Should be able to parse socket addr");
     event!(Level::INFO, "Webserver (HTTPS) listening on {}", addr);
 
@@ -81,7 +81,7 @@ fn make_https(
     uri: Uri,
     http_port: u16,
     https_port: u16,
-) -> Result<Uri, Box<dyn std::error::Error>> {
+) -> Result<Uri, Box<dyn core::error::Error>> {
     let mut parts = uri.into_parts();
 
     parts.scheme = Some(axum::http::uri::Scheme::HTTPS);
@@ -137,7 +137,7 @@ where
     {
         tracing::error!("Could not start the http -> https redirect server: {e}");
         panic!("Unable to start http -> https server. Unrecoverable.");
-    };
+    }
 }
 
 async fn css_style() -> impl IntoResponse {
@@ -243,22 +243,19 @@ async fn root(Extension(config): Extension<Arc<Config>>) -> impl IntoResponse {
                 .into_response();
         }
     };
-    let events = match bookings
+    let Some(events) = bookings
         .into_iter()
         .map(|b| Event::create_from_booking(b, &config))
         .collect::<Option<Vec<_>>>()
-    {
-        Some(x) => x,
-        None => {
-            let error_uuid = Uuid::new_v4();
-            warn!("Sending internal server error because there was a problem assigning bookings to rooms.");
-            warn!("Error-UUID: {error_uuid}");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                InternalServerErrorTemplate { error_uuid },
-            )
-                .into_response();
-        }
+    else {
+        let error_uuid = Uuid::new_v4();
+        warn!("Sending internal server error because there was a problem assigning bookings to rooms.");
+        warn!("Error-UUID: {error_uuid}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            InternalServerErrorTemplate { error_uuid },
+        )
+            .into_response();
     };
 
     // push the templated table
@@ -284,22 +281,19 @@ async fn all_rooms_ics(Extension(config): Extension<Arc<Config>>) -> impl IntoRe
                 .into_response();
         }
     };
-    let events = match bookings
+    let Some(events) = bookings
         .into_iter()
         .map(|b| Event::create_from_booking(b, &config))
         .collect::<Option<Vec<_>>>()
-    {
-        Some(x) => x,
-        None => {
-            let error_uuid = Uuid::new_v4();
-            warn!("Sending internal server error because there was a problem assigning bookings to rooms.");
-            warn!("Error-UUID: {error_uuid}");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                InternalServerErrorTemplate { error_uuid },
-            )
-                .into_response();
-        }
+    else {
+        let error_uuid = Uuid::new_v4();
+        warn!("Sending internal server error because there was a problem assigning bookings to rooms.");
+        warn!("Error-UUID: {error_uuid}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            InternalServerErrorTemplate { error_uuid },
+        )
+            .into_response();
     };
 
     // Create a new ics string
