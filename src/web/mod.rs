@@ -203,8 +203,9 @@ impl Event {
         );
         ics_event.push(ics::properties::DtStart::new(self.ics_start_time()));
         ics_event.push(ics::properties::DtEnd::new(self.ics_end_time()));
+        ics_event.push(ics::properties::Summary::new(format!("{}. {}", self.name, self.room.ics_location())));
+        ics_event.push(ics::properties::Description::new(self.room.ics_location()));
         ics_event.push(ics::properties::Location::new(self.room.ics_location()));
-        ics_event.push(ics::properties::Summary::new(self.name));
         ics_event
     }
 }
