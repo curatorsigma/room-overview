@@ -8,6 +8,8 @@ use serde::Deserialize;
 use tracing::{debug, info, trace, warn};
 
 use crate::{config::Config, db::DBError, Booking, InShutdown};
+// do not show bookings with this string in their description
+pub(crate) const DO_NOT_SHOW_MAGIC_STRING: &'static str = "NICHT_ANZEIGEN";
 
 #[derive(Debug, Deserialize)]
 struct CTBookingsResponse {
@@ -25,6 +27,7 @@ struct BookingsDataBase {
     id: i64,
     title: String,
     resource: ResourceData,
+    note: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -149,6 +152,13 @@ async fn get_relevant_bookings(
     response
         .data
         .into_iter()
+        .filter(|x: &BookingsData| {
+            if x.base.note.as_ref().map(|note| note.contains(DO_NOT_SHOW_MAGIC_STRING)).unwrap_or(false) {
+                false
+            } else {
+                true
+            }
+        })
         .map(|x: BookingsData| {
             Ok::<Booking, CTApiError>(Booking {
                 title: x.base.title,
