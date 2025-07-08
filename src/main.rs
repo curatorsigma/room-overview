@@ -22,6 +22,7 @@ struct Booking {
     /// This ID is used for matching ressources against rooms defined in the config.
     resource_id: i64,
     /// The ID of this booking. This is used to update bookings when they are updated in CT.
+    #[allow(clippy::struct_field_names)]
     booking_id: i64,
     /// Title of the booking in CT
     title: String,

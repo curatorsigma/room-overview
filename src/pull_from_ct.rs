@@ -9,7 +9,7 @@ use tracing::{debug, info, trace, warn};
 
 use crate::{config::Config, db::DBError, Booking, InShutdown};
 // do not show bookings with this string in their description
-pub(crate) const DO_NOT_SHOW_MAGIC_STRING: &'static str = "NICHT_ANZEIGEN";
+pub(crate) const DO_NOT_SHOW_MAGIC_STRING: &str = "NICHT_ANZEIGEN";
 
 #[derive(Debug, Deserialize)]
 struct CTBookingsResponse {
@@ -153,11 +153,10 @@ async fn get_relevant_bookings(
         .data
         .into_iter()
         .filter(|x: &BookingsData| {
-            if x.base.note.as_ref().map(|note| note.contains(DO_NOT_SHOW_MAGIC_STRING)).unwrap_or(false) {
-                false
-            } else {
-                true
-            }
+            !x.base
+                .note
+                .as_ref()
+                .is_some_and(|note| note.contains(DO_NOT_SHOW_MAGIC_STRING))
         })
         .map(|x: BookingsData| {
             Ok::<Booking, CTApiError>(Booking {

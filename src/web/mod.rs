@@ -62,65 +62,53 @@ pub async fn run_web_server(
     let shutdown_future = shutdown_signal(shutdown_handle.clone(), watcher.clone());
 
     let addr =
-        std::net::SocketAddr::from_str(&format!("{}:{}", &config.web.addr, &config.web.port))
+        core::net::SocketAddr::from_str(&format!("{}:{}", &config.web.addr, &config.web.port))
             .expect("Should be able to parse socket addr");
     // serve the main app on HTTP
     let http_future = axum_server::bind(addr)
         .handle(shutdown_handle.clone())
         .serve(app.clone().into_make_service());
 
-    match &config.web.rustls_config {
-        Some(rustls_conf) => {
-            let addr_tls = std::net::SocketAddr::from_str(&format!(
-                "{}:{}",
-                &config.web.addr, &config.web.tls_port
-            ))
-            .expect("Should be able to parse socket addr_tls");
-            // serve the main app on HTTPS
-            let https_future = axum_server::bind_rustls(addr_tls, rustls_conf.clone())
-                .handle(shutdown_handle.clone())
-                .serve(app.into_make_service());
-            event!(Level::INFO, "Webserver (HTTP) listening on {}", addr);
-            event!(Level::INFO, "Webserver (HTTPS) listening on {}", addr_tls);
-            tokio::select! {
-                r = http_future => {
-                    match r {
-                        Ok(()) => {}
-                        Err(e) => {
-                            tracing::error!("Failure while executing http server: {e}. Shutting down now.");
-                            shutdown_tx.send_replace(InShutdown::Yes);
-                        }
-                    };
+    if let Some(rustls_conf) = &config.web.rustls_config {
+        let addr_tls = core::net::SocketAddr::from_str(&format!(
+            "{}:{}",
+            &config.web.addr, &config.web.tls_port
+        ))
+        .expect("Should be able to parse socket addr_tls");
+        // serve the main app on HTTPS
+        let https_future = axum_server::bind_rustls(addr_tls, rustls_conf.clone())
+            .handle(shutdown_handle.clone())
+            .serve(app.into_make_service());
+        event!(Level::INFO, "Webserver (HTTP) listening on {}", addr);
+        event!(Level::INFO, "Webserver (HTTPS) listening on {}", addr_tls);
+        tokio::select! {
+            r = http_future => {
+                if let Err(e) = r {
+                        tracing::error!("Failure while executing http server: {e}. Shutting down now.");
+                        shutdown_tx.send_replace(InShutdown::Yes);
                 }
-                r1 = https_future => {
-                    match r1 {
-                        Ok(()) => {}
-                        Err(e) => {
-                            tracing::error!("Failure while executing https server: {e}. Shutting down now.");
-                            shutdown_tx.send_replace(InShutdown::Yes);
-                        }
-                    };
+            }
+            r1 = https_future => {
+                if let Err(e) = r1 {
+                        tracing::error!("Failure while executing https server: {e}. Shutting down now.");
+                        shutdown_tx.send_replace(InShutdown::Yes);
+                    }
                 }
-                _ = shutdown_future => {
+            () = shutdown_future => {
+            }
+        };
+    } else {
+        event!(Level::INFO, "Webserver (HTTP) listening on {}", addr);
+        tokio::select! {
+            r = http_future => {
+                if let Err(e) = r {
+                        tracing::error!("Failure while executing http server: {e}. Shutting down now.");
+                        shutdown_tx.send_replace(InShutdown::Yes);
                 }
-            };
-        }
-        None => {
-            event!(Level::INFO, "Webserver (HTTP) listening on {}", addr);
-            tokio::select! {
-                r = http_future => {
-                    match r {
-                        Ok(()) => {}
-                        Err(e) => {
-                            tracing::error!("Failure while executing http server: {e}. Shutting down now.");
-                            shutdown_tx.send_replace(InShutdown::Yes);
-                        }
-                    };
-                }
-                _ = shutdown_future => {
-                }
-            };
-        }
+            }
+            () = shutdown_future => {
+            }
+        };
     }
 
     Ok(())
@@ -203,7 +191,11 @@ impl Event {
         );
         ics_event.push(ics::properties::DtStart::new(self.ics_start_time()));
         ics_event.push(ics::properties::DtEnd::new(self.ics_end_time()));
-        ics_event.push(ics::properties::Summary::new(format!("{}. {}", self.name, self.room.ics_location())));
+        ics_event.push(ics::properties::Summary::new(format!(
+            "{}. {}",
+            self.name,
+            self.room.ics_location()
+        )));
         ics_event.push(ics::properties::Description::new(self.room.ics_location()));
         ics_event.push(ics::properties::Location::new(self.room.ics_location()));
         ics_event
