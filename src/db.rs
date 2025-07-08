@@ -162,9 +162,10 @@ pub async fn update_booking(db: &Pool<Sqlite>, booking: &Booking) -> Result<(), 
         .to_string();
     let end_time = booking.end_time.format_with_items(fmt).to_string();
     sqlx::query!(
-        "UPDATE bookings SET resource_id = ?, start_time = ?, end_time = ? \
+        "UPDATE bookings SET title = ?, resource_id = ?, start_time = ?, end_time = ? \
         WHERE booking_id = ?;
         ",
+        booking.title,
         booking.resource_id,
         start_time,
         end_time,
