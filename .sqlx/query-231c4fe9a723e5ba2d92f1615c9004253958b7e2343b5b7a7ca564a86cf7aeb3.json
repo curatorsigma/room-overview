@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT booking_id, title, resource_id, start_time, end_time FROM bookings WHERE start_time <= ? AND ? <= end_time;",
+  "query": "SELECT booking_id, title, resource_id, start_time, end_time FROM bookings WHERE start_time <= ? AND ? <= end_time\n         ORDER BY start_time;",
   "describe": {
     "columns": [
       {
@@ -40,5 +40,5 @@
       false
     ]
   },
-  "hash": "3b81e2837ac0040f664ef2496ec9961d719f941ee783901ce10e7b13638e4410"
+  "hash": "231c4fe9a723e5ba2d92f1615c9004253958b7e2343b5b7a7ca564a86cf7aeb3"
 }

@@ -73,6 +73,8 @@ async fn get_all_bookings(db: &Pool<Sqlite>) -> Result<Vec<Booking>, DBError> {
 }
 
 /// Get all bookings in the db which intersect the interval [start, end]
+///
+/// Order by start-date
 pub async fn get_bookings_in_timeframe(
     db: &Pool<Sqlite>,
     start: NaiveDateTime,
@@ -84,7 +86,8 @@ pub async fn get_bookings_in_timeframe(
     Ok(sqlx::query_as!(
         NaiveBooking,
         "SELECT booking_id, title, resource_id, start_time, end_time FROM bookings \
-         WHERE start_time <= ? AND ? <= end_time;",
+         WHERE start_time <= ? AND ? <= end_time
+         ORDER BY start_time;",
         end_str,
         start_str,
     )
