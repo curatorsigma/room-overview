@@ -50,6 +50,7 @@ pub async fn run_web_server(
         .route("/all_rooms.ics", get(all_rooms_ics))
         .layer(Extension(config.clone()))
         .route("/style.css", get(css_style))
+        .route("/jquery-3.2.1.min.js", get(jquery))
         .fallback(fallback);
 
     // run it
@@ -122,6 +123,19 @@ async fn css_style() -> impl IntoResponse {
         "text/css".parse().expect("static string"),
     );
     (headers, include_str!("../../templates/static/style.css"))
+}
+
+async fn jquery() -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::SERVER, "axum".parse().expect("static string"));
+    headers.insert(
+        header::CONTENT_TYPE,
+        "text/css".parse().expect("static string"),
+    );
+    (
+        headers,
+        include_str!("../../templates/static/jquery-3.2.1.min.js"),
+    )
 }
 
 async fn fallback() -> impl IntoResponse {

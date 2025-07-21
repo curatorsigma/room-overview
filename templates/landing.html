@@ -4,6 +4,43 @@
   <meta charset="UTF-8" />
 	<title>Raumbuchung</title>
 	<link rel="stylesheet" href="./style.css">
+
+	<script src="./jquery-3.2.1.min.js"></script>
+    <script type="text/javascript">
+				// check whether an element intersects the viewport
+				$.fn.isInViewport = function() {
+					var elementTop = $(this).offset().top;
+					var elementBottom = elementTop + $(this).outerHeight();
+
+					var viewportTop = $(window).scrollTop();
+					var viewportBottom = viewportTop + $(window).height();
+
+					return elementBottom > viewportTop && elementTop < viewportBottom;
+				};
+
+    	$.fn.infiniteScrollUp=function(){
+    		var self=this,kids=self.children()
+				// do nothing if all children are visisble
+				if (!kids.last().isInViewport()) {
+					// hide all but the last 20 kids
+					kids.slice(20).hide()
+					setInterval(function(){
+					// fade in the first hidden child
+					kids.filter(':hidden').eq(0).fadeIn()
+						// now fade out the first visible kid
+						kids.eq(0).fadeOut(1000, function(){
+							// and add it at the very end of the list
+							$(this).appendTo(self)
+							kids=self.children()
+						})
+					},10000)
+				}
+    		return this
+    	}
+    	$(function(){
+    		$('tbody').infiniteScrollUp()
+    	})
+    	</script>
 </head>
 
 <body hx-ext="response-targets" class="min-h-screen bg-neutral-700 text-sky-500 font-mono">
