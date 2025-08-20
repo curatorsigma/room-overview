@@ -27,6 +27,7 @@ struct BookingsDataBase {
     id: i64,
     title: String,
     resource: ResourceData,
+    appointment: Option<AppointmentData>,
     note: Option<String>,
 }
 
@@ -34,6 +35,14 @@ struct BookingsDataBase {
 struct ResourceData {
     /// this is the resources ID
     id: i64,
+}
+
+#[derive(Debug, Deserialize)]
+struct AppointmentData {
+    /// this is the resources ID
+    id: i64,
+    #[serde(rename = "calendarId")]
+    calendar_id: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -47,6 +56,7 @@ struct BookingsDataCalculated {
 #[derive(Debug)]
 pub enum CTApiError {
     GetBookings(reqwest::Error),
+    GetAppointments(reqwest::Error),
     Deserialize,
     Utf8Decode,
     ParseTime(chrono::ParseError),
@@ -56,6 +66,9 @@ impl core::fmt::Display for CTApiError {
         match self {
             Self::GetBookings(e) => {
                 write!(f, "Cannot get bookings. reqwest Error: {e}")
+            }
+            Self::GetAppointments(e) => {
+                write!(f, "Cannot get appointments. reqwest Error: {e}")
             }
             Self::Deserialize => {
                 write!(f, "Cannot deserialize the response.")
@@ -100,6 +113,75 @@ impl From<CTApiError> for GatherError {
     }
 }
 
+/// The full struct returned from CTs /api/calendar/{id}/appointments.
+#[derive(Debug, Deserialize)]
+struct CTAppointmentResponse {
+    data: FullAppointmentData,
+}
+
+/// A useless intermediate level struct
+#[derive(Debug, Deserialize)]
+struct FullAppointmentData {
+    appointment: AppointmentTimeframe,
+}
+
+#[derive(Debug, Deserialize)]
+struct AppointmentTimeframe {
+    #[serde(rename = "startDate")]
+    start_date: String,
+    #[serde(rename = "endDate")]
+    end_date: String,
+}
+
+/// Get an appointment (Calendar-Entry) from CT by its ID
+///
+/// Resource bookings that are linked to a calendar entry show the time of the calendar entry, not
+/// of the resource.
+async fn get_appointment(
+    config: &Config,
+    appointment_id: i64,
+    calendar_id: i64,
+) -> Result<AppointmentTimeframe, CTApiError> {
+    let response = match reqwest::Client::new()
+        .get(format!(
+            "https://{}/api/calendars/{}/appointments/{}",
+            config.ct.host, calendar_id, appointment_id
+        ))
+        .header("accept", "application/json")
+        .header("Authorization", format!("Login {}", config.ct.login_token))
+        .send()
+        .await
+    {
+        Ok(x) => {
+            let text_res = x.text().await;
+            match text_res {
+                Ok(text) => {
+                    let deser_res: Result<CTAppointmentResponse, _> = serde_json::from_str(&text);
+                    if let Ok(y) = deser_res {
+                        y
+                    } else {
+                        warn!("There was an error parsing the return value from CT.");
+                        warn!("The complete text received was: {text}");
+                        return Err(CTApiError::Deserialize);
+                    }
+                }
+                Err(e) => {
+                    warn!("There was an error reading the response from CT as utf-8: {e}");
+                    return Err(CTApiError::Utf8Decode);
+                }
+            }
+        }
+        Err(e) => {
+            warn!("There was a problem getting a response from CT");
+            return Err(CTApiError::GetAppointments(e));
+        }
+    };
+    Ok(response.data.appointment)
+}
+
+/// Bet all the relevant bookings in the given timeframe.
+///
+/// This is the main CT API function, the rest are helpers to this one
 async fn get_relevant_bookings(
     config: &Config,
     start_date: chrono::NaiveDate,
@@ -149,31 +231,52 @@ async fn get_relevant_bookings(
             return Err(CTApiError::GetBookings(e));
         }
     };
-    response
-        .data
-        .into_iter()
-        .filter(|x: &BookingsData| {
-            !x.base
-                .note
-                .as_ref()
-                .is_some_and(|note| note.contains(DO_NOT_SHOW_MAGIC_STRING))
-        })
-        .map(|x: BookingsData| {
-            Ok::<Booking, CTApiError>(Booking {
-                title: x.base.title,
-                booking_id: x.base.id,
-                resource_id: x.base.resource.id,
-                start_time: chrono::DateTime::parse_from_rfc3339(&x.calculated.start_date)
-                    .map_err(CTApiError::ParseTime)?
-                    // we get the date from CT with an unknown offset, and need to cast to UTC
-                    // (actually, CT seems to always return UTC, but this is not part of a stably documented API)
-                    .into(),
-                end_time: chrono::DateTime::parse_from_rfc3339(&x.calculated.end_date)
-                    .map_err(CTApiError::ParseTime)?
-                    .into(),
+    futures::future::join_all(
+        response
+            .data
+            .into_iter()
+            // ignore bookings that are forced no-show
+            .filter(|x: &BookingsData| {
+                !x.base
+                    .note
+                    .as_ref()
+                    .is_some_and(|note| note.contains(DO_NOT_SHOW_MAGIC_STRING))
             })
-        })
-        .collect::<Result<Vec<_>, _>>()
+            .map(|x: BookingsData| async move {
+                // potentially change the start/end date to those of a calendar appointment if this
+                // resource bookings was created from a calendar appointment
+                let (start_date, end_date) = if let Some(AppointmentData {
+                    id: appointment_id,
+                    calendar_id,
+                }) = x.base.appointment
+                {
+                    let calendar_appointment =
+                        get_appointment(config, appointment_id, calendar_id).await?;
+                    (
+                        calendar_appointment.start_date,
+                        calendar_appointment.end_date,
+                    )
+                } else {
+                    (x.calculated.start_date, x.calculated.end_date)
+                };
+                Ok::<Booking, CTApiError>(Booking {
+                    title: x.base.title,
+                    booking_id: x.base.id,
+                    resource_id: x.base.resource.id,
+                    start_time: chrono::DateTime::parse_from_rfc3339(&start_date)
+                        .map_err(CTApiError::ParseTime)?
+                        // we get the date from CT with an unknown offset, and need to cast to UTC
+                        // (actually, CT seems to always return UTC, but this is not part of a stably documented API)
+                        .into(),
+                    end_time: chrono::DateTime::parse_from_rfc3339(&end_date)
+                        .map_err(CTApiError::ParseTime)?
+                        .into(),
+                })
+            }),
+    )
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()
 }
 
 async fn get_bookings_into_db(config: Arc<Config>) -> Result<(), GatherError> {

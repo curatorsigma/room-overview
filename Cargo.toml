@@ -33,3 +33,4 @@ tracing-subscriber = { version = "0.3.18", features = ["time", "fmt", "env-filte
 uuid = { version = "1.10.0", features = ["v4"] }
 chrono-tz = "0.10.1"
 ics = "0.5.8"
+futures = "0.3.31"
