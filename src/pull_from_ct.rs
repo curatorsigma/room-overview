@@ -1,6 +1,6 @@
 //! Get data from Churchtools
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use chrono::Utc;
 use itertools::Itertools;
@@ -60,6 +60,8 @@ pub enum CTApiError {
     Deserialize,
     Utf8Decode,
     ParseTime(chrono::ParseError),
+    NoCalculatedDateTimeOnDay(i64, String),
+    NoCalculatedDateTime(i64),
 }
 impl core::fmt::Display for CTApiError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -79,8 +81,17 @@ impl core::fmt::Display for CTApiError {
             Self::ParseTime(e) => {
                 write!(
                     f,
-                    "Cannot parse a time contained in CTs response. chrono Error: {e}"
+                    "Cannot parse a time contained in CTs response. chrono Error: {e}."
                 )
+            }
+            Self::NoCalculatedDateTimeOnDay(appointment, day) => {
+                write!(
+                    f,
+                    "Appointment {appointment} has no calculated datetime on {day}."
+                )
+            }
+            Self::NoCalculatedDateTime(appointment) => {
+                write!(f, "Appointment {appointment} has no calculated datetime.")
             }
         }
     }
@@ -122,11 +133,16 @@ struct CTAppointmentResponse {
 /// A useless intermediate level struct
 #[derive(Debug, Deserialize)]
 struct FullAppointmentData {
-    appointment: AppointmentTimeframe,
+    /// A repeating appointment. Takes precedence when both `calculated_dates` and `calculated` are
+    /// given.
+    #[serde(rename = "calculatedDates")]
+    calculated_dates: Option<HashMap<String, Timeframe>>,
+    /// A single, nonrepeating appointment
+    calculated: Option<Timeframe>,
 }
 
 #[derive(Debug, Deserialize)]
-struct AppointmentTimeframe {
+struct Timeframe {
     #[serde(rename = "startDate")]
     start_date: String,
     #[serde(rename = "endDate")]
@@ -137,11 +153,19 @@ struct AppointmentTimeframe {
 ///
 /// Resource bookings that are linked to a calendar entry show the time of the calendar entry, not
 /// of the resource.
+///
+/// # INPUTS
+///     `config`
+///     `appointment_id`: ID of the appointment (calender entry)
+///     `calendar_id`: ID of the calendar
+///     `day`: YYYY-mm-dd representation of the day on which to take the date for a repeating
+///     appointment
 async fn get_appointment(
     config: &Config,
     appointment_id: i64,
     calendar_id: i64,
-) -> Result<AppointmentTimeframe, CTApiError> {
+    day: &str,
+) -> Result<Timeframe, CTApiError> {
     let response = match reqwest::Client::new()
         .get(format!(
             "https://{}/api/calendars/{}/appointments/{}",
@@ -176,7 +200,16 @@ async fn get_appointment(
             return Err(CTApiError::GetAppointments(e));
         }
     };
-    Ok(response.data.appointment)
+    if let Some(mut calculated_dates) = response.data.calculated_dates {
+        calculated_dates
+            .remove(day)
+            .ok_or_else(|| CTApiError::NoCalculatedDateTimeOnDay(appointment_id, day.to_string()))
+    } else {
+        response
+            .data
+            .calculated
+            .ok_or(CTApiError::NoCalculatedDateTime(appointment_id))
+    }
 }
 
 /// Bet all the relevant bookings in the given timeframe.
@@ -250,8 +283,14 @@ async fn get_relevant_bookings(
                     calendar_id,
                 }) = x.base.appointment
                 {
+                    let start_day = x
+                        .calculated
+                        .start_date
+                        .split('T')
+                        .next()
+                        .expect("Split always has a first element");
                     let calendar_appointment =
-                        get_appointment(config, appointment_id, calendar_id).await?;
+                        get_appointment(config, appointment_id, calendar_id, start_day).await?;
                     (
                         calendar_appointment.start_date,
                         calendar_appointment.end_date,
